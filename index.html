@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LinkVault - Quản lý liên kết và thư mục, lưu trữ cục bộ trên trình duyệt.">
+    <title>LinkVault - Quản Lý Liên Kết & Thư Mục</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="border-b border-dark-700 bg-dark-800/90 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-accent rounded-sm flex items-center justify-center text-dark-900 font-bold text-lg">
+                    <i class="fa-solid fa-link"></i>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight text-white">LINK<span class="text-accent">VAULT</span></h1>
+            </div>
+            
+            <div class="flex items-center gap-2 md:gap-3">
+                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(this)">
+                <button onclick="document.getElementById('importFile').click()" class="hidden md:flex px-3 py-2 text-xs md:text-sm font-semibold text-slate-300 bg-dark-700 hover:bg-slate-600 rounded-sm border border-dark-700 transition-colors items-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> Nhập
+                </button>
+                <button onclick="exportData()" class="hidden md:flex px-3 py-2 text-xs md:text-sm font-semibold text-slate-300 bg-dark-700 hover:bg-slate-600 rounded-sm border border-dark-700 transition-colors items-center gap-2">
+                    <i class="fa-solid fa-file-export"></i> Xuất
+                </button>
+                <button onclick="openFolderModal()" class="px-3 py-2 text-xs md:text-sm font-semibold text-accent bg-accent/10 hover:bg-accent/20 rounded-sm border border-accent/30 transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-folder-tree"></i> <span class="hidden sm:inline">Thư mục</span>
+                </button>
+                <button onclick="openLinkModal()" class="btn-primary px-4 py-2 text-xs md:text-sm font-bold text-dark-900 rounded-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Thêm Link</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- Search & Filter -->
+        <div class="mb-8 flex flex-col md:flex-row gap-4">
+            <div class="relative flex-1">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+                <input type="text" id="searchInput" placeholder="Tìm kiếm theo tiêu đề, tag, hoặc nội dung..." 
+                    class="w-full bg-dark-800 border border-dark-700 text-slate-200 text-sm rounded-sm focus:ring-1 focus:ring-accent focus:border-accent block pl-10 p-3 placeholder-slate-500 transition-all"
+                    oninput="renderLinks()">
+            </div>
+            <select id="categoryFilter" onchange="renderLinks()" class="bg-dark-800 border border-dark-700 text-slate-200 text-sm rounded-sm focus:ring-accent focus:border-accent block p-3 min-w-[180px]">
+                <option value="all">Tất cả thư mục</option>
+            </select>
+        </div>
+
+        <!-- Stats -->
+        <div class="flex items-center justify-between mb-4 border-b border-dark-700 pb-2">
+            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Danh sách liên kết</h2>
+            <span id="totalCount" class="text-xs font-mono text-accent bg-accent/10 px-2 py-1 rounded-sm border border-accent/20">0 liên kết</span>
+        </div>
+
+        <!-- Links Grid -->
+        <div id="linksGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Cards injected by JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-20">
+            <div class="w-16 h-16 bg-dark-800 rounded-sm flex items-center justify-center mx-auto mb-4 border border-dark-700">
+                <i class="fa-solid fa-folder-open text-2xl text-slate-600"></i>
+            </div>
+            <h3 class="text-lg font-medium text-slate-300">Kho lưu trữ trống</h3>
+            <p class="text-slate-500 mt-1 text-sm">Hãy tạo thư mục mới và thêm liên kết đầu tiên của bạn.</p>
+        </div>
+    </main>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- 1. Folder Management Modal -->
+    <div id="folderModal" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-dark-900/90 backdrop-blur-sm" onclick="closeFolderModal()"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="relative transform overflow-hidden rounded-sm bg-dark-800 border border-dark-700 shadow-2xl w-full max-w-md modal-enter">
+                    <div class="px-6 py-5">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-folder-tree text-accent"></i> Quản lý Thư mục
+                            </h3>
+                            <button onclick="closeFolderModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                        </div>
+
+                        <!-- Add Folder Form -->
+                        <form onsubmit="addFolder(event)" class="flex gap-2 mb-6">
+                            <input type="text" id="newFolderName" required placeholder="Tên thư mục mới (VD: Tài chính)..." 
+                                class="flex-1 bg-dark-900 border border-dark-700 text-slate-200 text-sm rounded-sm focus:ring-1 focus:ring-accent focus:border-accent p-2.5">
+                            <button type="submit" class="btn-primary px-4 py-2 text-sm font-bold text-dark-900 rounded-sm">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </form>
+
+                        <!-- Folder List -->
+                        <div class="max-h-64 overflow-y-auto scrollbar-hide space-y-2" id="folderList">
+                            <!-- Folders injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Add/Edit Link Modal -->
+    <div id="linkModal" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-dark-900/90 backdrop-blur-sm" onclick="closeLinkModal()"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div class="relative transform overflow-hidden rounded-sm bg-dark-800 border border-dark-700 shadow-2xl w-full max-w-lg modal-enter">
+                    <div class="px-6 py-5">
+                        <div class="flex justify-between items-center mb-5">
+                            <h3 class="text-lg font-bold text-white" id="linkModalTitle">Thêm Liên Kết Mới</h3>
+                            <button onclick="closeLinkModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                        </div>
+                        
+                        <form id="linkForm" onsubmit="saveLink(event)">
+                            <input type="hidden" id="linkId">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">URL Liên kết *</label>
+                                    <input type="url" id="url" required placeholder="https://..." 
+                                        class="w-full bg-dark-900 border border-dark-700 text-slate-200 text-sm rounded-sm focus:ring-1 focus:ring-accent focus:border-accent p-2.5">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Tiêu đề / Ý nghĩa *</label>
+                                    <input type="text" id="title" required placeholder="Ví dụ: Nghiên cứu AI trên Zenodo" 
+                                        class="w-full bg-dark-900 border border-dark-700 text-slate-200 text-sm rounded-sm focus:ring-1 focus:ring-accent focus:border-accent p-2.5">
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Thư mục *</label>
+                                        <select id="category" required class="w-full bg-dark-900 border border-dark-700 text-slate-200 text-sm rounded-sm focus:ring-1 focus:ring-accent focus:border-accent p-2.5">
+                                            <!-- Populated by JS -->
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Tags (cách nhau bởi dấu phẩy)</label>
+                                        <input type="text" id="tags" placeholder="arxiv, pdf, audio" 
+                                            class="w-full bg-dark-900 border border-dark-700 text-slate-200 text-sm rounded-sm focus:ring-1 focus:ring-accent focus:border-accent p-2.5">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Ghi chú</label>
+                                    <textarea id="notes" rows="3" placeholder="Mô tả ngắn gọn nội dung..." 
+                                        class="w-full bg-dark-900 border border-dark-700 text-slate-200 text-sm rounded-sm focus:ring-1 focus:ring-accent focus:border-accent p-2.5"></textarea>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex gap-3 justify-end">
+                                <button type="button" onclick="closeLinkModal()" class="px-4 py-2 text-sm font-semibold text-slate-300 bg-dark-700 hover:bg-slate-600 rounded-sm border border-dark-700 transition-colors">Hủy</button>
+                                <button type="submit" class="btn-primary px-4 py-2 text-sm font-bold text-dark-900 rounded-sm">Lưu Liên Kết</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script src="js/app.js"></script>
+</body>
+</html>
